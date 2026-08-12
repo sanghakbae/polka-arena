@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from "react"
 import { arenaAddress } from "./lib/arena"
 import { FAUCET_URL, explorerAddress, polkadotHubTestnet } from "./lib/chain"
+import type { ArchivedFight } from "./lib/firestore"
+import { useArchive } from "./lib/useArchive"
 import { useArena, type ArenaAction } from "./lib/useArena"
 import { useWallet } from "./lib/useWallet"
+import { Archive } from "./components/Archive"
 import { Armory } from "./components/Armory"
 import type { BattleView } from "./components/BattleStage"
 import { CreateHero } from "./components/CreateHero"
@@ -15,12 +18,13 @@ import { Landing } from "./components/Landing"
 import { TxToast } from "./components/TxToast"
 import { Notice, shortAddress } from "./components/ui"
 
-type Tab = "dungeon" | "armory" | "ladder"
+type Tab = "dungeon" | "armory" | "ladder" | "archive"
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "dungeon", label: "던전", icon: "🗡️" },
   { id: "armory", label: "장비", icon: "🛡️" },
   { id: "ladder", label: "랭킹", icon: "🏅" },
+  { id: "archive", label: "전적", icon: "📜" },
 ]
 
 export default function App() {
@@ -36,14 +40,39 @@ export default function App() {
   const [battle, setBattle] = useState<BattleView>()
   // Which fight the stage is showing: the last dungeon run or the last duel.
   const [focus, setFocus] = useState<"run" | "duel">("run")
+  // A fight pulled out of the archive, which outranks the live one until cleared.
+  const [pinned, setPinned] = useState<ArchivedFight>()
 
-  const { hero, run, duel, replay, replayDuel, ladder, send } = arena
+  const { hero, run, duel, replay, replayDuel, replaySeed, ladder, send } = arena
+  const archive = useArchive(wallet.account, arena.tx.phase === "done" ? arena.tx.hash : undefined)
 
   // Rebuild the replay whenever the fight we are focused on changes.
   useEffect(() => {
     let cancelled = false
 
     void (async () => {
+      if (pinned) {
+        const rounds = await replaySeed(pinned.seed, pinned.hero, pinned.foe)
+        if (cancelled) return
+        const foe = pinned.foe as { name?: string }
+        setBattle({
+          key: `archive-${pinned.id}`,
+          heroName: hero?.name ?? "나",
+          foeName:
+            pinned.kind === "run"
+              ? `${foe.name ?? "적"} (${pinned.depth}층)`
+              : shortAddress(pinned.opponent ?? "0x"),
+          heroStartHp: pinned.hero.hp,
+          foeStartHp: pinned.foe.hp,
+          rounds,
+          won: pinned.won,
+          reward:
+            pinned.kind === "run" ? { xp: pinned.xpGained ?? 0, gold: pinned.goldGained ?? 0 } : undefined,
+          ratingDelta: pinned.kind === "duel" ? pinned.ratingDelta : undefined,
+        })
+        return
+      }
+
       if (focus === "duel" && duel) {
         const rounds = await replayDuel(duel)
         if (cancelled) return
@@ -83,7 +112,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [focus, run, duel, hero?.name, ladder, replay, replayDuel])
+  }, [focus, pinned, run, duel, hero?.name, ladder, replay, replayDuel, replaySeed])
 
   const onAction = useCallback(
     (action: ArenaAction) => {
@@ -91,6 +120,8 @@ export default function App() {
       // the refresh lands, so the replay does not flash the previous fight.
       if (action.kind === "duel") setFocus("duel")
       if (action.kind === "delve") setFocus("run")
+      // A new fight always takes the stage back from an archived one.
+      setPinned(undefined)
       void send(action)
     },
     [send],
@@ -141,9 +172,22 @@ export default function App() {
                     hero={hero}
                     busy={arena.busy}
                     loading={arena.loading}
+                    source={arena.ladderSource}
                     onAction={onAction}
                   />
                 </div>
+                {archive.available && (
+                  <div className="tabpanel" hidden={tab !== "archive"} id="panel-archive" role="tabpanel">
+                    <Archive
+                      archive={archive}
+                      currentSeed={pinned?.seed}
+                      onReplay={(fight) => {
+                        setPinned(fight)
+                        setTab("dungeon")
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -175,7 +219,7 @@ export default function App() {
 
       {hero && !showLanding && (
         <nav className="tabbar" role="tablist" aria-label="게임 화면">
-          {TABS.map((entry) => (
+          {TABS.filter((entry) => entry.id !== "archive" || archive.available).map((entry) => (
             <button
               key={entry.id}
               className="tab"

@@ -1,0 +1,56 @@
+name: Index chain logs into Firestore
+
+on:
+  schedule:
+    # Every 15 minutes. The indexer is incremental and idempotent — fight ids are
+    # derived from the log position, so a repeated run overwrites rather than
+    # duplicating, and an occasional missed run only costs freshness.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      from_genesis:
+        description: "Rebuild the whole archive from block 0"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Two indexers writing at once would fight over the cursor.
+concurrency:
+  group: indexer
+  cancel-in-progress: false
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Index
+        env:
+          ARENA_ADDRESS: ${{ vars.VITE_ARENA_ADDRESS }}
+          RPC_URL: ${{ vars.RPC_URL }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -z "$ARENA_ADDRESS" ]; then
+            echo "VITE_ARENA_ADDRESS is not set; deploy the contract first." >&2
+            exit 1
+          fi
+          if [ "${{ inputs.from_genesis }}" = "true" ]; then
+            pnpm --filter @polka-arena/indexer backfill
+          else
+            pnpm --filter @polka-arena/indexer index
+          fi

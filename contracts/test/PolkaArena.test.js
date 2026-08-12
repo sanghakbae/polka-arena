@@ -189,6 +189,38 @@ describe("PolkaArena", function () {
       expect(replay.heroHp).to.equal(run.heroHpLeft);
     });
 
+    it("emits enough in the log to replay the fight without any stored state", async function () {
+      // This is the property the off-chain archive depends on: `lastRun` holds only
+      // the newest fight, so an indexer has to rebuild older ones from logs alone.
+      const { arena, alice } = await loadFixture(deployFixture);
+      await arena.connect(alice).createHero("Ada");
+
+      const tx = await arena.connect(alice).delve();
+      const receipt = await tx.wait();
+      const event = receipt.logs
+        .map((log) => {
+          try {
+            return arena.interface.parseLog(log);
+          } catch {
+            return null;
+          }
+        })
+        .find((parsed) => parsed?.name === "Delved");
+
+      expect(event, "no Delved event").to.not.equal(undefined);
+      const { seed, hero, foe, won, rounds } = event.args;
+
+      const replay = await arena.simulate(
+        seed,
+        { hp: hero.hp, atk: hero.atk, def: hero.def, luck: hero.luck },
+        { hp: foe.hp, atk: foe.atk, def: foe.def, luck: foe.luck },
+      );
+
+      expect(replay.heroWon).to.equal(won);
+      expect(replay.fought).to.equal(rounds);
+      expect(replay.rounds.length).to.equal(Number(rounds));
+    });
+
     it("produces different fights on back-to-back calls in the same block", async function () {
       const { arena, alice } = await loadFixture(deployFixture);
       await arena.connect(alice).createHero("Ada");
@@ -340,6 +372,35 @@ describe("PolkaArena", function () {
       await arena.connect(alice).duel(bob.address);
       const duel = await arena.lastDuel(alice.address);
       expect(duel.challenger.hp).to.equal(hero.maxHp);
+    });
+
+    it("emits enough in the log to replay the duel", async function () {
+      const { arena, alice, bob } = await loadFixture(deployFixture);
+      await arena.connect(alice).createHero("Ada");
+      await arena.connect(bob).createHero("Grace");
+
+      const receipt = await (await arena.connect(alice).duel(bob.address)).wait();
+      const event = receipt.logs
+        .map((log) => {
+          try {
+            return arena.interface.parseLog(log);
+          } catch {
+            return null;
+          }
+        })
+        .find((parsed) => parsed?.name === "Dueled");
+
+      expect(event, "no Dueled event").to.not.equal(undefined);
+      const { seed, challengerStats, defenderStats, challengerWon, rounds } = event.args;
+
+      const replay = await arena.simulate(
+        seed,
+        { hp: challengerStats.hp, atk: challengerStats.atk, def: challengerStats.def, luck: challengerStats.luck },
+        { hp: defenderStats.hp, atk: defenderStats.atk, def: defenderStats.def, luck: defenderStats.luck },
+      );
+
+      expect(replay.heroWon).to.equal(challengerWon);
+      expect(replay.fought).to.equal(rounds);
     });
 
     it("rejects self-duels, unknown opponents, and two duels in one block", async function () {

@@ -898,7 +898,10 @@ a:hover {
   bottom: 0;
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Column count follows however many tabs are rendered — the archive tab only
+     appears when Firestore is configured. */
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   background: rgba(16, 13, 24, 0.94);
   backdrop-filter: blur(16px);
   border-top: 1px solid var(--border);

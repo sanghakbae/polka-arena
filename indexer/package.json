@@ -1,0 +1,16 @@
+{
+  "name": "@polka-arena/indexer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "index": "node src/index.js",
+    "backfill": "node src/index.js --from-genesis",
+    "verify": "node scripts/verify-decoding.mjs"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "firebase-admin": "^13.0.2",
+    "viem": "^2.31.0"
+  }
+}

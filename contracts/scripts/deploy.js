@@ -56,9 +56,30 @@ function writeFrontendBindings({ address, abi }) {
       `export const polkaArenaAbi = ${abi} as const;\n`,
   );
 
-  const envPath = path.join(__dirname, "..", "..", "web", ".env.local");
-  fs.writeFileSync(envPath, `VITE_ARENA_ADDRESS=${address}\n`);
+  upsertEnv(path.join(__dirname, "..", "..", "web", ".env.local"), "VITE_ARENA_ADDRESS", address);
   console.log(`wrote web/.env.local (VITE_ARENA_ADDRESS)`);
+}
+
+/// Rewrites one key in place. Writing the whole file would drop the other local
+/// settings that live beside the address — the RPC url, chain id and dev key that
+/// point the frontend at a local node.
+function upsertEnv(envPath, key, value) {
+  const line = `${key}=${value}`;
+
+  let contents;
+  try {
+    contents = fs.readFileSync(envPath, "utf8");
+  } catch {
+    fs.writeFileSync(envPath, `${line}\n`);
+    return;
+  }
+
+  const existing = new RegExp(`^${key}=.*$`, "m");
+  const next = existing.test(contents)
+    ? contents.replace(existing, line)
+    : `${contents.replace(/\n*$/, "\n")}${line}\n`;
+
+  fs.writeFileSync(envPath, next);
 }
 
 main().catch((error) => {

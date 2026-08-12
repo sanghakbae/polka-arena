@@ -131,6 +131,76 @@ every push to `main`. Set `VITE_ARENA_ADDRESS` as a repository **variable**
 where the contract lives. Without it the site still builds and shows a "not
 deployed yet" notice.
 
+## The off-chain archive (Firestore)
+
+Three things the chain cannot serve well on its own:
+
+- **Ladder cache** — so the leaderboard renders without a `ladder()` call per visit.
+- **Fight history and replays** — the contract keeps only your *most recent* fight.
+  Everything older exists solely here.
+- **Seasons** — standings over a block window, which would be expensive on-chain
+  and is pure presentation anyway.
+
+### The security model, in one line
+
+Clients read; only the indexer writes.
+
+Anything a browser can write, a player can forge — there is no way to verify a
+client-submitted battle record. So [`firestore.rules`](firestore.rules) denies all
+client writes, and [`indexer/`](indexer/) holds the only credentials that can
+write. Everything it writes is derived from chain logs.
+
+This is why the contract's `Delved` and `Dueled` events carry the seed *and* both
+combatants rather than just the outcome: a fight has to be reconstructible from
+its log alone. `contracts/test/PolkaArena.test.js` pins that property, and
+`pnpm --filter @polka-arena/indexer verify` checks the indexer's own event
+signatures still decode against a live chain — if a contract change breaks them,
+viem decodes nothing and the indexer would silently write an empty archive.
+
+### Collections
+
+| Path | Contents |
+|---|---|
+| `heroes/{address}` | Latest hero snapshot, read from `heroOf` (not replayed from events, so a missed event costs freshness and never correctness) |
+| `fights/{txHash}_{logIndex}` | One fight, with the seed and both combatants — enough to replay |
+| `seasons/{id}` | Window plus computed standings, rebuilt each run |
+| `meta/indexer` | Cursor: last indexed block |
+
+Ids are derived from the log position, so re-running or backfilling overwrites
+instead of duplicating.
+
+### Setting it up
+
+The frontend needs two public values; add them as repository **variables** so the
+Pages build picks them up (the web API key is not a secret — it identifies the
+project, and the rules are what protect the data):
+
+```
+VITE_FIREBASE_PROJECT_ID
+VITE_FIREBASE_API_KEY
+```
+
+The indexer needs a service account, as a repository **secret**:
+
+```
+FIREBASE_SERVICE_ACCOUNT   the service-account JSON, single line
+```
+
+Then push the rules and indexes:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+[`.github/workflows/index.yml`](.github/workflows/index.yml) runs the indexer every
+15 minutes, and has a manual trigger with a "rebuild from block 0" option.
+
+Without any of this configured the app simply reads the chain directly and hides
+the history tab — the archive is an optimisation, never a dependency.
+
+Season windows live in [`indexer/seasons.json`](indexer/seasons.json); set
+`endBlock` to close one and add the next.
+
 ## Notes on the contract
 
 - `viaIR` is on: the run/loot structs push `delve` past Solidity's 16-slot stack

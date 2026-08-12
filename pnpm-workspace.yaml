@@ -1,6 +1,7 @@
 packages:
   - contracts
   - web
+  - indexer
 
 # pnpm 10 blocks postinstall scripts by default. These packages ship native
 # binaries they build on install, and the toolchain does not work without them.

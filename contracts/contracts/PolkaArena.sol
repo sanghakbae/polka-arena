@@ -117,12 +117,37 @@ contract PolkaArena {
     // --------------------------------------------------------------- events
 
     event HeroCreated(address indexed player, string name, uint16 maxHp, uint16 atk, uint16 def);
-    event Delved(address indexed player, uint32 depth, bool won, bool died, uint32 xp, uint32 gold);
+
+    /// @dev Carries the seed and both combatants, not just the outcome, so a fight
+    ///      stays replayable from logs alone. `lastRun` holds only the most recent
+    ///      fight, so without this an archive could not reproduce older ones.
+    event Delved(
+        address indexed player,
+        uint32 indexed depth,
+        bytes32 seed,
+        Combatant hero,
+        Foe foe,
+        bool won,
+        bool died,
+        uint8 rounds,
+        uint32 xp,
+        uint32 gold
+    );
     event LeveledUp(address indexed player, uint8 level, uint16 maxHp, uint16 atk, uint16 def);
     event Equipped(address indexed player, uint8 slot, uint8 tier, uint32 cost);
     event Rested(address indexed player, uint16 healed, uint32 cost);
     event Revived(address indexed player, uint32 depthLost);
-    event Dueled(address indexed challenger, address indexed defender, bool challengerWon, uint32 ratingDelta);
+    /// @dev Same reasoning as `Delved`: enough in the log to replay the duel.
+    event Dueled(
+        address indexed challenger,
+        address indexed defender,
+        bytes32 seed,
+        Combatant challengerStats,
+        Combatant defenderStats,
+        bool challengerWon,
+        uint8 rounds,
+        uint32 ratingDelta
+    );
 
     // ---------------------------------------------------------------- errors
 
@@ -234,7 +259,7 @@ contract PolkaArena {
             goldGained: goldGained
         });
 
-        emit Delved(msg.sender, depth, heroWon, !heroWon, xpGained, goldGained);
+        emit Delved(msg.sender, depth, seed, hero, foe, heroWon, !heroWon, rounds, xpGained, goldGained);
         return (heroWon, !heroWon);
     }
 
@@ -370,7 +395,7 @@ contract PolkaArena {
             ratingDelta: delta
         });
 
-        emit Dueled(msg.sender, defender, challengerWon, delta);
+        emit Dueled(msg.sender, defender, seed, ca, cd, challengerWon, rounds, delta);
         return challengerWon;
     }
 

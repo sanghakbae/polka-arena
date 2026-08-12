@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "fights",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "blockNumber", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "fights",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "kind", "order": "ASCENDING" },
+        { "fieldPath": "blockNumber", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "heroes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "rating", "order": "DESCENDING" },
+        { "fieldPath": "deepest", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

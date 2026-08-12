@@ -1,7 +1,7 @@
 import type { Address } from "viem"
 import { explorerAddress } from "../lib/chain"
 import type { Hero, LadderEntry } from "../lib/arena"
-import type { ArenaAction } from "../lib/useArena"
+import type { ArenaAction, LadderSource } from "../lib/useArena"
 import { ExplorerLink } from "./ExplorerLink"
 import { Panel, Spinner, shortAddress } from "./ui"
 
@@ -11,6 +11,7 @@ export function Ladder({
   hero,
   busy,
   loading,
+  source,
   onAction,
 }: {
   entries: LadderEntry[]
@@ -18,6 +19,7 @@ export function Ladder({
   hero: Hero | undefined
   busy: ArenaAction["kind"] | undefined
   loading: boolean
+  source: LadderSource
   onAction: (action: ArenaAction) => void
 }) {
   const anyBusy = busy !== undefined
@@ -85,6 +87,8 @@ export function Ladder({
       <div className="field-hint" style={{ padding: "10px 8px 4px" }}>
         결투는 양쪽 모두 최대 체력으로 시작하므로, 순위는 휴식 상태가 아니라 빌드를 반영합니다. 도전 사이에는 3블록의
         쿨다운이 있습니다.
+        <br />
+        {source === "cache" ? "색인 캐시에서 불러옴 — 방금 끝난 결투는 조금 늦게 반영됩니다." : "체인에서 직접 조회."}
       </div>
     </Panel>
   )

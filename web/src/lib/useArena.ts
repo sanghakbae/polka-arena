@@ -9,6 +9,7 @@ import {
   isZeroAddress,
   polkaArenaAbi,
   xpForNextLevel,
+  type Combatant,
   type Duel,
   type Hero,
   type LadderEntry,
@@ -16,7 +17,10 @@ import {
   type Run,
   type SlotId,
 } from "./arena"
+import { fetchLadder } from "./firestore"
 import { readableError } from "./useWallet"
+
+export type LadderSource = "cache" | "chain"
 
 /// Every player-triggered transaction, so the UI can disable exactly the button
 /// that is in flight rather than freezing the whole screen.
@@ -54,6 +58,8 @@ export type ArenaState = {
   run: Run | undefined
   duel: Duel | undefined
   ladder: LadderEntry[]
+  /// Whether the ladder came from the Firestore cache or straight from the chain.
+  ladderSource: LadderSource
   loading: boolean
   tx: TxStatus
   /// The action currently in flight, for per-button spinners.
@@ -61,6 +67,8 @@ export type ArenaState = {
   send: (action: ArenaAction) => Promise<boolean>
   replay: (run: Run) => Promise<Round[]>
   replayDuel: (duel: Duel) => Promise<Round[]>
+  /// Replays any fight from its raw inputs — used for archived fights.
+  replaySeed: (seed: `0x${string}`, hero: Combatant, foe: Combatant) => Promise<Round[]>
   refresh: () => Promise<void>
   dismissTx: () => void
 }
@@ -81,6 +89,7 @@ export function useArena(deps: SendDeps): ArenaState {
   const [run, setRun] = useState<Run>()
   const [duel, setDuel] = useState<Duel>()
   const [ladder, setLadder] = useState<LadderEntry[]>([])
+  const [ladderSource, setLadderSource] = useState<LadderSource>("chain")
   const [loading, setLoading] = useState(false)
   const [ready, setReady] = useState(false)
   const [tx, setTx] = useState<TxStatus>({ phase: "idle" })
@@ -89,8 +98,14 @@ export function useArena(deps: SendDeps): ArenaState {
   // Guards against a slow refresh landing after a newer one and clobbering it.
   const refreshToken = useRef(0)
 
-  const loadLadder = useCallback(async (): Promise<LadderEntry[]> => {
-    if (!arenaAddress) return []
+  const loadLadder = useCallback(async (): Promise<{ entries: LadderEntry[]; source: LadderSource }> => {
+    if (!arenaAddress) return { entries: [], source: "chain" }
+
+    // The cache is an optimisation, never a dependency: one `ladder()` call is
+    // cheap enough to fall back to, and a stale indexer must not break the game.
+    const cached = await fetchLadder()
+    if (cached && cached.length > 0) return { entries: cached, source: "cache" }
+
     const [addrs, records] = (await publicClient.readContract({
       address: arenaAddress,
       abi: polkaArenaAbi,
@@ -98,10 +113,12 @@ export function useArena(deps: SendDeps): ArenaState {
       args: [0n, LADDER_PAGE],
     })) as unknown as [Address[], Hero[]]
 
-    return addrs
+    const entries = addrs
       .map((address, i) => ({ address, ...(records[i] as Hero) }))
       .sort((a, b) => b.rating - a.rating || b.deepest - a.deepest)
       .map((entry, i) => ({ ...entry, rank: i + 1 }))
+
+    return { entries, source: "chain" }
   }, [])
 
   const refresh = useCallback(async () => {
@@ -114,7 +131,8 @@ export function useArena(deps: SendDeps): ArenaState {
     try {
       const nextLadder = await loadLadder()
       if (token !== refreshToken.current) return
-      setLadder(nextLadder)
+      setLadder(nextLadder.entries)
+      setLadderSource(nextLadder.source)
 
       if (!account) {
         setHero(undefined)
@@ -203,37 +221,56 @@ export function useArena(deps: SendDeps): ArenaState {
     [account, onRightChain, refresh, walletClient, onSettled],
   )
 
-  /// Re-derives a fight from its seed. The contract's `simulate` is pure, so this
-  /// returns exactly the rounds that produced the stored outcome.
-  const replay = useCallback(async (target: Run): Promise<Round[]> => {
-    if (!arenaAddress) return []
-    const result = (await publicClient.readContract({
-      address: arenaAddress,
-      abi: polkaArenaAbi,
-      functionName: "simulate",
-      args: [
-        target.seed,
-        { hp: target.hero.hp, atk: target.hero.atk, def: target.hero.def, luck: target.hero.luck },
-        { hp: target.foe.hp, atk: target.foe.atk, def: target.foe.def, luck: target.foe.luck },
-      ],
-    })) as unknown as [Round[], number, number, boolean]
-    return [...result[0]]
-  }, [])
+  /// Re-derives a fight from its seed and the two combatants. `simulate` is pure,
+  /// so this returns exactly the rounds that produced the recorded outcome —
+  /// whether those inputs came from the contract or from the off-chain archive.
+  const replaySeed = useCallback(
+    async (seed: `0x${string}`, hero: Combatant, foe: Combatant): Promise<Round[]> => {
+      if (!arenaAddress) return []
+      const result = (await publicClient.readContract({
+        address: arenaAddress,
+        abi: polkaArenaAbi,
+        functionName: "simulate",
+        args: [
+          seed,
+          { hp: hero.hp, atk: hero.atk, def: hero.def, luck: hero.luck },
+          { hp: foe.hp, atk: foe.atk, def: foe.def, luck: foe.luck },
+        ],
+      })) as unknown as [Round[], number, number, boolean]
+      return [...result[0]]
+    },
+    [],
+  )
 
-  const replayDuel = useCallback(async (target: Duel): Promise<Round[]> => {
-    if (!arenaAddress) return []
-    const result = (await publicClient.readContract({
-      address: arenaAddress,
-      abi: polkaArenaAbi,
-      functionName: "simulate",
-      args: [target.seed, target.challenger, target.defender],
-    })) as unknown as [Round[], number, number, boolean]
-    return [...result[0]]
-  }, [])
+  const replay = useCallback(
+    (target: Run): Promise<Round[]> => replaySeed(target.seed, target.hero, target.foe),
+    [replaySeed],
+  )
+
+  const replayDuel = useCallback(
+    (target: Duel): Promise<Round[]> => replaySeed(target.seed, target.challenger, target.defender),
+    [replaySeed],
+  )
 
   const dismissTx = useCallback(() => setTx({ phase: "idle" }), [])
 
-  return { ready, hero, run, duel, ladder, loading, tx, busy, send, replay, replayDuel, refresh, dismissTx }
+  return {
+    ready,
+    hero,
+    run,
+    duel,
+    ladder,
+    ladderSource,
+    loading,
+    tx,
+    busy,
+    send,
+    replay,
+    replayDuel,
+    replaySeed,
+    refresh,
+    dismissTx,
+  }
 }
 
 /// The display constants in arena.ts are hand-copied from the contract, and they
