@@ -1,5 +1,6 @@
 import { FAUCET_URL, polkadotHubTestnet } from "../lib/chain"
 import type { WalletState } from "../lib/useWallet"
+import { noProviderAction } from "../lib/walletLinks"
 import { Notice, Spinner } from "./ui"
 
 /// Everything a visitor sees before they have a hero on this chain: the pitch,
@@ -14,6 +15,7 @@ export function Landing({
   ladderCount: number
 }) {
   const { hasProvider, account, onRightChain, connecting, connect, switchChain, error } = wallet
+  const noProvider = noProviderAction()
 
   return (
     <div className="hero-splash">
@@ -29,8 +31,8 @@ export function Landing({
             컨트랙트 배포 대기 중
           </span>
         ) : !hasProvider ? (
-          <a className="btn primary" href="https://metamask.io/download/" target="_blank" rel="noreferrer noopener">
-            지갑 설치하기 ↗
+          <a className="btn primary" href={noProvider.href} target="_blank" rel="noreferrer noopener">
+            {noProvider.label} ↗
           </a>
         ) : !account ? (
           <button className="btn primary" onClick={() => void connect()} disabled={connecting}>
@@ -46,6 +48,12 @@ export function Landing({
           테스트 토큰 받기 ↗
         </a>
       </div>
+
+      {!hasProvider && deployed && (
+        <div style={{ maxWidth: 460, margin: "18px auto 0", textAlign: "left" }}>
+          <Notice tone="info">{noProvider.hint}</Notice>
+        </div>
+      )}
 
       {error && (
         <div style={{ maxWidth: 440, margin: "18px auto 0", textAlign: "left" }}>

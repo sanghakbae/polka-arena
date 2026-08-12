@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { createWalletClient, custom, http, type Address, type WalletClient } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { polkadotHubTestnet, publicClient, walletAddChainParams } from "./chain"
+import { isMobileBrowser } from "./walletLinks"
 
 /// Local development only: sign with a key from the config instead of a browser
 /// extension, so the game is clickable against a local node without installing
@@ -179,7 +180,14 @@ function useBrowserWallet(): WalletState {
 
   const connect = useCallback(async () => {
     if (!provider) {
-      setError("EVM 지갑을 찾을 수 없습니다. MetaMask 같은 지갑을 설치한 뒤 새로고침해 주세요.")
+      // On a phone the app being installed is not enough: MetaMask only injects a
+      // provider inside its own in-app browser, so telling someone to install it
+      // is misleading when they already have it.
+      setError(
+        isMobileBrowser()
+          ? "모바일 브라우저에서는 지갑 앱을 찾을 수 없습니다. MetaMask 앱의 내장 브라우저로 이 페이지를 열어주세요."
+          : "EVM 지갑을 찾을 수 없습니다. MetaMask 같은 지갑을 설치한 뒤 새로고침해 주세요.",
+      )
       return
     }
     setConnecting(true)

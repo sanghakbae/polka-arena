@@ -1,9 +1,11 @@
 import { polkadotHubTestnet } from "../lib/chain"
 import type { WalletState } from "../lib/useWallet"
+import { noProviderAction } from "../lib/walletLinks"
 import { Spinner, formatBalance, shortAddress } from "./ui"
 
 export function Header({ wallet }: { wallet: WalletState }) {
-  const { account, onRightChain, balance, connecting, connect, switchChain } = wallet
+  const { hasProvider, account, onRightChain, balance, connecting, connect, switchChain } = wallet
+  const noProvider = noProviderAction()
 
   return (
     <header className="header">
@@ -17,7 +19,15 @@ export function Header({ wallet }: { wallet: WalletState }) {
           </span>
         </div>
 
-        {!account && (
+        {/* With no injected provider, "connect" has nothing to talk to. On a phone
+            that means reopening the page inside the wallet app, not a dead button. */}
+        {!account && !hasProvider && (
+          <a className="btn primary sm" href={noProvider.href} target="_blank" rel="noreferrer noopener">
+            {noProvider.label}
+          </a>
+        )}
+
+        {!account && hasProvider && (
           <button className="btn primary sm" onClick={() => void connect()} disabled={connecting}>
             {connecting ? <Spinner /> : "지갑 연결"}
           </button>
