@@ -15,9 +15,16 @@ module.exports = {
       optimizer: { enabled: true, runs: 200 },
     },
   },
-  // Compiles Solidity down to PolkaVM (RISC-V) bytecode instead of EVM bytecode.
+  // Compiles Solidity to PolkaVM (RISC-V) rather than EVM bytecode.
+  //
+  // `version` must be pinned. The plugin hardcodes 0.6.0 as its default and its
+  // "npm" source resolves the @parity/resolc 0.3.0 it bundles, ignoring whatever
+  // version this project installs. A blob built by 0.6.0 uploaded fine and then
+  // trapped on every single call, including constant getters, while a 2kB
+  // contract from the same toolchain worked — so the version is not cosmetic.
   resolc: {
-    compilerSource: "npm",
+    version: "1.2.0",
+    compilerSource: "binary",
     settings: {
       optimizer: { enabled: true, runs: 200 },
     },

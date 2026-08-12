@@ -8,6 +8,7 @@ seed to a full blow-by-blow log, so the browser replays exactly what the contrac
 recorded rather than inventing its own animation.
 
 **Live:** https://polka-arena.sanghak.kr
+**Contract:** [`0x76c7f38b…6655c`](https://blockscout-testnet.polkadot.io/address/0x76c7f38b3e8387897b3e457e51e970da4996655c) on Polkadot Hub TestNet
 
 ## How it plays
 
@@ -74,7 +75,7 @@ npx hardhat --config hardhat.evm.config.js node
 
 # terminal 2
 cd contracts
-npx hardhat --config hardhat.evm.config.js run scripts/deploy.js --network localhost
+npx hardhat --config hardhat.evm.config.js run scripts/deploy-local.js --network localhost
 npx hardhat --config hardhat.evm.config.js run scripts/seed-local.js --network localhost
 ```
 
@@ -134,13 +135,16 @@ onto Paseo Asset Hub and the temporary "Passet Hub" is gone from the dropdown.
 Older guides that tell you to select Passet Hub, or to use
 `?parachain=1111`, are out of date.
 
-`pnpm deploy:testnet` writes the ABI to `web/src/generated/abi.ts` and the address
-into `web/.env.local`.
+`pnpm deploy:testnet` writes the ABI to `web/src/generated/abi.ts`, verifies the
+deployed contract actually answers calls, and prints the address. It deliberately
+does **not** touch `web/.env.local` — that file usually points at a local node, and
+a testnet address sitting beside a localhost RPC leaves local dev quietly broken.
 
-Note: `pallet-revive` uses 20-byte Ethereum-style addresses. The first time an
-account interacts with it, that account has to be mapped from its 32-byte
-Substrate id — wallets that target Polkadot Hub handle this, but it is worth
-knowing if a first transaction fails oddly.
+On account mapping: `pallet-revive` uses 20-byte Ethereum-style addresses, and a
+*native* 32-byte Substrate account (sr25519/ed25519) has to be mapped before it can
+interact. An account derived from a secp256k1 key — anything from MetaMask, ethers,
+or viem — needs no mapping. Verified: a freshly generated key funded from the
+faucet deployed and called `createHero` with no mapping step.
 
 ### Deploying the site
 
@@ -219,6 +223,29 @@ the history tab — the archive is an optimisation, never a dependency.
 
 Season windows live in [`indexer/seasons.json`](indexer/seasons.json); set
 `endBlock` to close one and add the next.
+
+## Two toolchain traps worth knowing about
+
+Both of these cost real time, and neither fails in a way that points at the cause.
+
+**resolc's version must be pinned.** `@parity/hardhat-polkadot` defaults to resolc
+`0.6.0` and its `compilerSource: "npm"` resolves the `@parity/resolc@0.3.0` it
+bundles — whatever version the project installs is ignored. A blob built by 0.6.0
+*uploads successfully* and then traps on **every** call, including plain constant
+getters, with `ContractTrapped`. A 2kB contract from the same toolchain worked
+fine, which is what made it look like a size problem; it is not. Pinning
+`resolc: { version: "1.2.0", compilerSource: "binary" }` fixed it, and dropped the
+blob from 149kB to 134kB. `contracts/Ping.sol` exists to tell these apart: if Ping
+also traps, suspect the toolchain, not your contract.
+
+`scripts/deploy.mjs` reads a few constants after deploying for this reason — a
+deployment that reports success is not evidence the contract runs.
+
+**hardhat-ethers cannot send to the eth-rpc adapter.** Every transaction type
+(legacy, EIP-1559, explicit gas) is rejected with a bare `fields had validation
+errors`, while `eth_estimateGas` for the same payload succeeds. The identical
+transaction signed by viem goes through, so the deploy script uses viem directly
+and hardhat only compiles.
 
 ## Notes on the contract
 

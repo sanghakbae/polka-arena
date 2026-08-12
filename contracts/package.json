@@ -6,7 +6,7 @@
     "compile": "hardhat compile",
     "test": "hardhat --config hardhat.evm.config.js test",
     "account": "hardhat run scripts/account.js --network polkadotHubTestnet",
-    "deploy:testnet": "hardhat run scripts/deploy.js --network polkadotHubTestnet"
+    "deploy:testnet": "node scripts/deploy.mjs"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.1.2",
@@ -16,6 +16,7 @@
     "chai": "^4.5.0",
     "dotenv": "^16.4.7",
     "hardhat": "^2.22.19",
-    "solc": "0.8.28"
+    "solc": "0.8.28",
+    "viem": "^2.55.13"
   }
 }
