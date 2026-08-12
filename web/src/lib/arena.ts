@@ -98,6 +98,46 @@ export const SLOTS = [
 
 export type SlotId = 0 | 1 | 2
 
+/// Five rarities, shared across slots. Tier is the mechanic; rarity is what makes
+/// a purchase feel like something rather than "+6 attack".
+export const RARITIES = ["일반", "고급", "희귀", "영웅", "전설"] as const
+
+export type Item = { name: string; icon: string; rarity: (typeof RARITIES)[number] }
+
+/// Indexed [slot][tier - 1]. Names are flavour only — the contract knows tiers.
+const ITEMS: readonly (readonly Item[])[] = [
+  [
+    { name: "녹슨 단검", icon: "🗡️", rarity: "일반" },
+    { name: "강철 장검", icon: "⚔️", rarity: "고급" },
+    { name: "은빛 삼차창", icon: "🔱", rarity: "희귀" },
+    { name: "룬 전투도끼", icon: "🪓", rarity: "영웅" },
+    { name: "용살검", icon: "☄️", rarity: "전설" },
+  ],
+  [
+    { name: "누비 갑옷", icon: "🧥", rarity: "일반" },
+    { name: "사슬 갑옷", icon: "🛡️", rarity: "고급" },
+    { name: "판금 갑옷", icon: "🪖", rarity: "희귀" },
+    { name: "미스릴 갑옷", icon: "🏵️", rarity: "영웅" },
+    { name: "용린 갑옷", icon: "🐉", rarity: "전설" },
+  ],
+  [
+    { name: "구리 반지", icon: "🔘", rarity: "일반" },
+    { name: "수정 부적", icon: "💠", rarity: "고급" },
+    { name: "마력 오브", icon: "🔮", rarity: "희귀" },
+    { name: "운명의 눈", icon: "🧿", rarity: "영웅" },
+    { name: "왕관", icon: "👑", rarity: "전설" },
+  ],
+]
+
+export function itemFor(slot: SlotId, tier: number): Item | undefined {
+  return ITEMS[slot]?.[tier - 1]
+}
+
+/// A css class per rarity, so colour lives in one place.
+export function rarityClass(rarity: Item["rarity"]): string {
+  return `r-${RARITIES.indexOf(rarity) + 1}`
+}
+
 export function xpForNextLevel(level: number): number {
   return level * 80 + level * level * 10
 }

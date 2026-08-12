@@ -28,9 +28,9 @@
   --loss: #e5484d;
   --crit: #ffb224;
 
-  --radius: 14px;
-  --radius-sm: 9px;
-  --radius-lg: 20px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 15px;
 
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
   --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.4), 0 16px 40px rgba(0, 0, 0, 0.45);
@@ -40,7 +40,9 @@
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
   /* Height of the mobile tab bar, so scroll areas can clear it. */
-  --tabbar: 62px;
+  --tabbar: 56px;
+  /* Panel padding, widened on desktop where there is room to spare. */
+  --pad: 12px;
 }
 
 *,
@@ -114,7 +116,7 @@ a:hover {
 .shell {
   width: 100%;
   margin: 0 auto;
-  padding: 0 14px;
+  padding: 0 10px;
 }
 
 .main {
@@ -137,6 +139,15 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 18px;
+  }
+}
+
+@media (min-width: 900px) {
+  :root {
+    --pad: 16px;
+  }
+  .shell {
+    padding: 0 18px;
   }
 }
 
@@ -267,7 +278,7 @@ a:hover {
 }
 
 .panel + .panel {
-  margin-top: 14px;
+  margin-top: 10px;
 }
 @media (min-width: 900px) {
   .panel + .panel {
@@ -278,8 +289,8 @@ a:hover {
 .panel-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 8px;
+  padding: 10px var(--pad);
   border-bottom: 1px solid var(--border);
 }
 
@@ -298,11 +309,11 @@ a:hover {
 }
 
 .panel-body {
-  padding: 16px;
+  padding: var(--pad);
 }
 
 .panel-body.tight {
-  padding: 10px;
+  padding: 6px;
 }
 
 /* ========================================================================= */
@@ -315,10 +326,10 @@ a:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   /* 44px keeps every control a comfortable touch target. */
   min-height: 44px;
-  padding: 0 16px;
+  padding: 0 13px;
   border-radius: var(--radius);
   border: 1px solid var(--btn-border);
   background: var(--btn-bg);
@@ -400,19 +411,19 @@ a:hover {
 }
 
 .avatar {
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   flex: none;
-  border-radius: 13px;
+  border-radius: 11px;
   display: grid;
   place-items: center;
-  font-size: 22px;
+  font-size: 19px;
   background: linear-gradient(150deg, var(--surface-hi), #2a2140);
   border: 1px solid var(--border-hi);
 }
 
 .hero-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.01em;
   margin: 0;
@@ -453,9 +464,9 @@ a:hover {
 }
 
 .bars {
-  margin-top: 14px;
+  margin-top: 10px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .bar-label {
@@ -496,7 +507,7 @@ a:hover {
 
 /* Stat grid: 2-up on a phone, 4-up once there is room. */
 .stats {
-  margin-top: 14px;
+  margin-top: 10px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -511,7 +522,7 @@ a:hover {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 9px 10px;
+  padding: 7px 9px;
 }
 
 .stat-k {
@@ -521,7 +532,7 @@ a:hover {
 }
 
 .stat-v {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.25;
@@ -545,7 +556,7 @@ a:hover {
   background:
     radial-gradient(80% 60% at 50% 0%, rgba(230, 0, 122, 0.1), transparent 70%),
     linear-gradient(180deg, #191426, #110e1b);
-  padding: 14px;
+  padding: 11px;
   overflow: hidden;
 }
 
@@ -717,97 +728,189 @@ a:hover {
 /* Armory                                                                    */
 /* ========================================================================= */
 
-.slot + .slot {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
+/* Five rarities, one colour each. Tier is the mechanic; rarity is what makes a
+   purchase feel like loot instead of a stat increment. */
+.r-1 { --rar: #8b93a7; --rar-dim: rgba(139, 147, 167, 0.13); }
+.r-2 { --rar: #4ac97e; --rar-dim: rgba(74, 201, 126, 0.13); }
+.r-3 { --rar: #45a7f5; --rar-dim: rgba(69, 167, 245, 0.14); }
+.r-4 { --rar: #b06cf7; --rar-dim: rgba(176, 108, 247, 0.15); }
+.r-5 { --rar: #ffa33d; --rar-dim: rgba(255, 163, 61, 0.16); }
+
+.slots {
+  display: grid;
+  gap: 8px;
 }
 
-.slot-head {
-  display: flex;
+/* The fallback goes through :where() so it carries zero specificity. Declared as
+   a plain `.slot-card` rule it sat later in the file than .r-1…r-5 and, at equal
+   specificity, silently overrode every rarity colour. */
+:where(.slot-card, .upgrade) {
+  --rar: var(--border-hi);
+  --rar-dim: transparent;
+}
+
+.slot-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--bg-elevated), rgba(0, 0, 0, 0.16));
+  padding: 9px;
+  display: grid;
+  gap: 8px;
+}
+
+.slot-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
-  margin-bottom: 9px;
 }
 
-.slot-icon {
-  font-size: 17px;
-}
-
-.slot-name {
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.slot-desc {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--text-faint);
-  text-align: right;
-}
-
-.tiers {
+/* The equipped item's icon, tinted by its rarity. */
+.slot-gem {
+  width: 34px;
+  height: 34px;
+  flex: none;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  place-items: center;
+  font-size: 17px;
+  border-radius: 10px;
+  background: var(--rar-dim);
+  border: 1px solid var(--rar);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rar) 8%, transparent);
 }
 
-.tier {
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  border-radius: var(--radius-sm);
-  padding: 8px 4px;
-  min-height: 58px;
+.slot-info {
+  min-width: 0;
+}
+
+.slot-kind {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+
+.slot-item {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.slot-item b {
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-rarity {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--rar);
+  flex: none;
+}
+
+.slot-none {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+/* Progress through the five tiers, as pips rather than five buttons — only the
+   next tier is ever purchasable, so five buttons was four dead controls. */
+.pips {
+  display: flex;
   gap: 3px;
+  flex: none;
+}
+
+.pips i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2a2440;
+  border: 1px solid var(--border-hi);
+}
+
+/* Filled pips read as progress even at the muted "일반" rarity, where --rar is
+   close enough to the track colour to disappear on its own. */
+.pips i.on {
+  width: 6px;
+  height: 6px;
+  background: color-mix(in srgb, var(--rar) 85%, white);
+  border-color: var(--rar);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--rar) 55%, transparent);
+}
+
+.upgrade {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--rar) 45%, var(--border));
+  background: linear-gradient(100deg, var(--rar-dim), transparent 70%);
+  text-align: left;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+  transition: filter 0.15s ease, transform 0.12s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.tier:active:not(:disabled) {
-  transform: scale(0.95);
+.upgrade:hover:not(:disabled) {
+  filter: brightness(1.2);
 }
 
-.tier .t-no {
-  font-size: 12px;
-  font-weight: 800;
+.upgrade:active:not(:disabled) {
+  transform: scale(0.985);
 }
 
-.tier .t-cost {
-  font-size: 10px;
-  color: var(--gold);
-  font-variant-numeric: tabular-nums;
-}
-
-.tier.owned {
-  background: rgba(61, 214, 140, 0.1);
-  border-color: rgba(61, 214, 140, 0.32);
-  color: #8ff0bd;
-  cursor: default;
-}
-
-.tier.current {
-  background: var(--accent-wash);
-  border-color: var(--accent);
-  color: var(--accent-soft);
-  cursor: default;
-}
-
-.tier.locked {
-  opacity: 0.4;
+.upgrade:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
-.tier.affordable {
-  border-color: var(--border-hi);
+.up-icon {
+  font-size: 16px;
+  width: 24px;
+  text-align: center;
+  flex: none;
 }
-.tier.affordable:hover {
-  background: var(--surface-hi);
-  border-color: var(--accent);
+
+.up-text {
+  min-width: 0;
+  display: grid;
+}
+
+.up-text b {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.up-text small {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.up-cost {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.upgrade.maxed {
+  cursor: default;
+  border-style: dashed;
+  opacity: 0.75;
 }
 
 /* ========================================================================= */
@@ -821,10 +924,10 @@ a:hover {
 
 .rowitem {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) auto;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 10px 8px;
+  gap: 8px;
+  padding: 8px 6px;
   border-radius: var(--radius-sm);
 }
 
@@ -980,7 +1083,7 @@ a:hover {
 /* Mobile stacks the columns, so space the cards manually; on desktop the
    column's flex `gap` takes over. */
 .board > .column > * + * {
-  margin-top: 14px;
+  margin-top: 10px;
 }
 @media (min-width: 900px) {
   .board > .column > * + * {
@@ -994,7 +1097,7 @@ a:hover {
 
 .hero-splash {
   text-align: center;
-  padding: 40px 16px 30px;
+  padding: 28px 8px 24px;
 }
 
 .hero-splash h1 {
