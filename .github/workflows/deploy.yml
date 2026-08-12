@@ -1,0 +1,59 @@
+name: Deploy web to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pages needs these; the default token is read-only.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A newer push should supersede an in-flight deploy rather than queue behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter @polka-arena/web typecheck
+
+      - name: Build
+        # Set VITE_ARENA_ADDRESS as a repository variable (Settings → Secrets and
+        # variables → Actions → Variables) after deploying the contract. Without
+        # it the site builds fine and shows a "not deployed yet" notice.
+        env:
+          VITE_ARENA_ADDRESS: ${{ vars.VITE_ARENA_ADDRESS }}
+        run: pnpm --filter @polka-arena/web build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,10 @@
+packages:
+  - contracts
+  - web
+
+# pnpm 10 blocks postinstall scripts by default. These packages ship native
+# binaries they build on install, and the toolchain does not work without them.
+onlyBuiltDependencies:
+  - esbuild
+  - keccak
+  - secp256k1

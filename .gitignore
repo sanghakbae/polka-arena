@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.local
+
+# hardhat / polkavm build output
+artifacts/
+artifacts-pvm/
+cache/
+cache-pvm/
+typechain-types/
+ignition/deployments/
+*.tsbuildinfo
+
+.DS_Store

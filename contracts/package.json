@@ -1,0 +1,20 @@
+{
+  "name": "@polka-arena/contracts",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat --config hardhat.evm.config.js test",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network polkadotHubTestnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.2",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@parity/hardhat-polkadot": "0.3.0",
+    "@parity/resolc": "1.2.0",
+    "chai": "^4.5.0",
+    "dotenv": "^16.4.7",
+    "hardhat": "^2.22.19",
+    "solc": "0.8.28"
+  }
+}
