@@ -257,6 +257,18 @@ async function rollUpSeasons(db) {
 }
 
 function initFirestore() {
+  // Against the emulator there is nothing to authenticate as, which is the only
+  // way to exercise the write path without a real service-account key:
+  //   firebase emulators:start --only firestore
+  //   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_PROJECT_ID=polka-arena pnpm index
+  if (process.env.FIRESTORE_EMULATOR_HOST) {
+    const projectId = process.env.FIREBASE_PROJECT_ID
+    if (!projectId) throw new Error("FIREBASE_PROJECT_ID is required when using the emulator")
+    console.log(`using firestore emulator at ${process.env.FIRESTORE_EMULATOR_HOST}`)
+    initializeApp({ projectId })
+    return getFirestore()
+  }
+
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT
   if (!raw) throw new Error("FIREBASE_SERVICE_ACCOUNT is not set")
 
