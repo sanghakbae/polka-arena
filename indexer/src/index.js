@@ -27,6 +27,12 @@ const RPC_URL = process.env.RPC_URL ?? "https://eth-rpc-testnet.polkadot.io/"
 const ARENA_ADDRESS = process.env.ARENA_ADDRESS
 const FROM_GENESIS = process.argv.includes("--from-genesis")
 
+/// The block the contract was deployed in. Nothing before it can possibly hold a
+/// log for this address, and the chain was already 12.1M blocks deep at deploy
+/// time — starting from 0 would mean ~6,000 pointless getLogs round trips before
+/// reaching anything. Set it to the deployment block; a rebuild starts here too.
+const START_BLOCK = BigInt(process.env.START_BLOCK ?? 0)
+
 /// Some RPCs cap eth_getLogs ranges; 2k blocks is comfortably under every limit
 /// we have hit and keeps a backfill to a sane number of round trips.
 const CHUNK = 2000n
@@ -54,7 +60,11 @@ async function main() {
 
   const latest = await chain.getBlockNumber()
   const cursorRef = db.collection("meta").doc("indexer")
-  const cursor = FROM_GENESIS ? 0n : BigInt((await cursorRef.get()).data()?.lastBlock ?? 0)
+  const stored = BigInt((await cursorRef.get()).data()?.lastBlock ?? 0)
+  // `cursor` is the last block already done, so scanning resumes at cursor + 1.
+  const cursor = FROM_GENESIS
+    ? maxBigInt(START_BLOCK - 1n, 0n)
+    : maxBigInt(stored, maxBigInt(START_BLOCK - 1n, 0n))
 
   if (cursor >= latest) {
     console.log(`up to date at block ${latest}`)
@@ -254,6 +264,10 @@ async function rollUpSeasons(db) {
     )
     console.log(`  ${season.id}: ${snapshot.size} fights, ${standings.length} ranked`)
   }
+}
+
+function maxBigInt(a, b) {
+  return a > b ? a : b
 }
 
 function initFirestore() {

@@ -42,6 +42,9 @@ jobs:
         env:
           ARENA_ADDRESS: ${{ vars.VITE_ARENA_ADDRESS }}
           RPC_URL: ${{ vars.RPC_URL }}
+          # The contract's deployment block. Without it a rebuild would walk the
+          # 12.1M blocks that existed before the contract did.
+          START_BLOCK: ${{ vars.START_BLOCK }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
         run: |

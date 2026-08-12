@@ -209,6 +209,14 @@ The indexer needs a service account, as a repository **secret**:
 FIREBASE_SERVICE_ACCOUNT   the service-account JSON, single line
 ```
 
+```bash
+gh secret set FIREBASE_SERVICE_ACCOUNT --repo <owner>/<repo> < service-account.json
+```
+
+Also set `START_BLOCK` as a variable, to the block the contract was deployed in.
+The chain was already 12.1M blocks deep at deploy time, so without it a rebuild
+walks ~6,000 chunks of empty history before reaching anything.
+
 Then push the rules and indexes:
 
 ```bash
