@@ -45,9 +45,16 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
         run: |
+          # Skip rather than fail when the project is not wired up yet. On a
+          # 15-minute schedule a hard failure would mean a red run and a
+          # notification four times an hour for something that is not broken.
           if [ -z "$ARENA_ADDRESS" ]; then
-            echo "VITE_ARENA_ADDRESS is not set; deploy the contract first." >&2
-            exit 1
+            echo "::warning::VITE_ARENA_ADDRESS is not set — skipping. Deploy the contract and set the repository variable."
+            exit 0
+          fi
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT is not set — skipping. Add it as a repository secret to enable the archive."
+            exit 0
           fi
           if [ "${{ inputs.from_genesis }}" = "true" ]; then
             pnpm --filter @polka-arena/indexer backfill
