@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { arenaAddress } from "./lib/arena"
-import { FAUCET_URL, explorerAddress, polkadotHubTestnet } from "./lib/chain"
+import { explorerAddress, faucetUrlFor, polkadotHubTestnet } from "./lib/chain"
 import type { ArchivedFight } from "./lib/firestore"
 import { useArchive } from "./lib/useArchive"
 import { useArena, type ArenaAction } from "./lib/useArena"
@@ -195,10 +195,18 @@ export default function App() {
           {connected && !hasFunds && (
             <div style={{ marginTop: 14 }}>
               <Notice>
-                이 계정의 PAS 잔액이 0입니다.{" "}
-                <a href={FAUCET_URL} target="_blank" rel="noreferrer noopener">
-                  faucet에서 받기 ↗
-                </a>
+                가스비로 쓸 PAS가 없습니다. 아래 링크는 이 계정 주소와 체인(Asset Hub)이 이미 채워져 있으니,
+                CAPTCHA만 통과하면 됩니다.
+                <div style={{ marginTop: 8 }}>
+                  <a
+                    className="btn sm"
+                    href={faucetUrlFor(wallet.account)}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    이 주소로 PAS 받기 ↗
+                  </a>
+                </div>
               </Notice>
             </div>
           )}

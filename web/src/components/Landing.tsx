@@ -1,4 +1,4 @@
-import { FAUCET_URL, polkadotHubTestnet } from "../lib/chain"
+import { faucetUrlFor, polkadotHubTestnet } from "../lib/chain"
 import type { WalletState } from "../lib/useWallet"
 import { noProviderAction } from "../lib/walletLinks"
 import { Notice, Spinner } from "./ui"
@@ -44,7 +44,7 @@ export function Landing({
           </button>
         ) : null}
 
-        <a className="btn ghost" href={FAUCET_URL} target="_blank" rel="noreferrer noopener">
+        <a className="btn ghost" href={faucetUrlFor(account)} target="_blank" rel="noreferrer noopener">
           테스트 토큰 받기 ↗
         </a>
       </div>

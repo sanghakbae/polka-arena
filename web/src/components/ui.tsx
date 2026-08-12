@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 
 export function Spinner() {
   return <span className="spinner" role="presentation" />
@@ -102,6 +102,34 @@ export function Notice({
 
 export function shortAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`
+}
+
+/// Copies an address to the clipboard and confirms it briefly. Exists because the
+/// faucet lives in another app: on a phone, copying the address by hand out of the
+/// wallet is the most annoying step in getting started.
+export function CopyAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(address)
+    } catch {
+      return // Clipboard blocked (insecure context, or denied); leave the label alone.
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1600)
+  }
+
+  return (
+    <button
+      className="copy-addr"
+      onClick={() => void copy()}
+      aria-label={copied ? "주소를 복사했습니다" : "주소 복사"}
+      title={address}
+    >
+      {copied ? "복사됨" : "복사"}
+    </button>
+  )
 }
 
 /// PAS balances come back in 18-decimal wei; four places is plenty for a faucet balance.

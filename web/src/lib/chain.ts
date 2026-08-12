@@ -34,6 +34,18 @@ export const polkadotHubTestnet = defineChain({
 
 export const FAUCET_URL = "https://faucet.polkadot.io/"
 
+/// The faucet with the network, chain and recipient already filled in, so nobody
+/// has to copy an address between two apps on a phone.
+///
+/// `parachain=1000` is Paseo Asset Hub, which is where pallet-revive now lives —
+/// the temporary "Passet Hub" (1111) that older guides mention is gone. The
+/// address field accepts either SS58 or a 20-byte 0x address; we pass the 0x one,
+/// since that is the account that will actually pay for gas.
+export function faucetUrlFor(address: string | undefined): string {
+  if (!address) return FAUCET_URL
+  return `https://faucet.polkadot.io/paseo?address=${address}&parachain=1000`
+}
+
 /// Reads go through this regardless of whether a wallet is connected, so the
 /// ladder and a hero's public record are visible to visitors who never connect.
 export const publicClient = createPublicClient({

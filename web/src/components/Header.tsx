@@ -1,7 +1,7 @@
 import { polkadotHubTestnet } from "../lib/chain"
 import type { WalletState } from "../lib/useWallet"
 import { noProviderAction } from "../lib/walletLinks"
-import { Spinner, formatBalance, shortAddress } from "./ui"
+import { CopyAddress, Spinner, formatBalance, shortAddress } from "./ui"
 
 export function Header({ wallet }: { wallet: WalletState }) {
   const { hasProvider, account, onRightChain, balance, connecting, connect, switchChain } = wallet
@@ -43,6 +43,7 @@ export function Header({ wallet }: { wallet: WalletState }) {
           <div className="wallet-chip">
             <span className="dot" />
             <span className="addr">{shortAddress(account)}</span>
+            <CopyAddress address={account} />
             <span className="bal">{formatBalance(balance)} PAS</span>
           </div>
         )}
