@@ -111,9 +111,28 @@ a token.
 
 ```bash
 cd contracts
-echo "PRIVATE_KEY=0x..." > .env    # an account funded from the faucet
+echo "PRIVATE_KEY=0x..." > .env
+pnpm account          # prints the 0x address to fund, and its balance
+# fund it at the faucet (below), then:
 pnpm deploy:testnet
 ```
+
+#### Getting PAS from the faucet
+
+At [faucet.polkadot.io](https://faucet.polkadot.io/):
+
+- **Network:** Polkadot testnet (Paseo)
+- **Chain:** Asset Hub — chain id 1000, which is the default
+- **Address:** the `0x` address `pnpm account` printed
+
+The field is labelled "Paseo Address", but its placeholder is `5rt6... or 0x318...`
+— it takes either format. Use the `0x` one, because that is the account the
+deployment signs with. 5000 PAS per request, once per 24h per account.
+
+There is no separate smart-contract chain to pick any more: `pallet-revive` moved
+onto Paseo Asset Hub and the temporary "Passet Hub" is gone from the dropdown.
+Older guides that tell you to select Passet Hub, or to use
+`?parachain=1111`, are out of date.
 
 `pnpm deploy:testnet` writes the ABI to `web/src/generated/abi.ts` and the address
 into `web/.env.local`.
